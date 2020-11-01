@@ -249,7 +249,7 @@ p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos
 }
 
 
-void funcao_imprimir_lista_args (p_char** lista_args, int qtd_espaco_comandos) {
+void funcao_imprimir_tab_comandos (p_char** tab_comandos, int qtd_espaco_comandos) {
 
     int i = 0;
     //Percorre os comandos
@@ -257,11 +257,11 @@ void funcao_imprimir_lista_args (p_char** lista_args, int qtd_espaco_comandos) {
         int j = 0;
         printf("%dº comando: ", i + 1);
         //Percorre os argumentos
-        while (lista_args[i][j] != NULL) {
+        while (tab_comandos[i][j] != NULL) {
             int l = 0;
             //Percorre os caracteres
-            while (lista_args[i][j][l] != '\0') {
-                printf("%c", lista_args[i][j][l]);
+            while (tab_comandos[i][j][l] != '\0') {
+                printf("%c", tab_comandos[i][j][l]);
                 l++;
             }
             printf(" ");
@@ -272,44 +272,61 @@ void funcao_imprimir_lista_args (p_char** lista_args, int qtd_espaco_comandos) {
     }
 }
 
-void liberar_lista_args (p_char** lista_args, int* qtd_espaco_comandos) {
+void liberar_tab_comandos (p_char** tab_comandos, int* qtd_espaco_comandos) {
 
     int i = 0;
 
     while (i < (*qtd_espaco_comandos)) {
         int j = 0;
-        while (lista_args[i][j] != NULL) {
-            free (lista_args[i][j]);
+        while (tab_comandos[i][j] != NULL) {
+            free (tab_comandos[i][j]);
             j++;
         }
-        free (lista_args[i]);
+        free (tab_comandos[i]);
         i++;
     }
-    free (lista_args);
+    free (tab_comandos);
 }
+
+
+// Características do shell:
+// Não suporta expansão de nome de arquivos (globbing), redirecionamento ('<', '<<', '>', '>>', ...)
+// Única forma de concatenar comandos é através de pipes (comando utilizado é a ',')
+// Interpreta argumentos entre aspas como um único argumento
+// Não faz distinção entre aspas duplas ou simples 
+// Se existir somente uma aspas, ele exerga tudo da 1ª até o final como algo único
+// Para sair digitar 'quit'
 
 
 int main() {
 
     char entrada[TAM_ENTRADA];
-    p_char** lista_args;
-    int qtd_espaco_comandos = 1;
-    int qtd_espaco_args = 1;
-    pid_t pid;
-
 
     while (1) {
         int qtd_pipes = 0;
+        int qtd_espaco_comandos = 4;
+        int qtd_espaco_args = 4;
 
-        pegar_entrada(entrada);
+        // Estrutura usada para armazenar os comandos
+        // tab_comandos[0][0] acessa o 1º arg do 1º comando (próprio comando), tab_comandos[0][1] acessa o 2º arg do 1º comando ...
+        p_char** tab_comandos;
 
-        lista_args = split_entrada(entrada, &qtd_pipes, &qtd_espaco_comandos, &qtd_espaco_args);
-        funcao_imprimir_lista_args(lista_args, qtd_espaco_comandos);
+        if (pegar_entrada(entrada)) {
+            if (verificar_entrada(entrada)) {
+                tab_comandos = split_entrada(entrada, &qtd_pipes, &qtd_espaco_comandos, &qtd_espaco_args);
+                //imprimir_tab_comandos(tab_comandos, qtd_espaco_comandos);
 
+                if (strcmp(tab_comandos[0][0], "quit") == 0) {
+                    liberar_tab_comandos (tab_comandos, &qtd_espaco_comandos);
+                    break;
+                } else {
+                    executar_comando (tab_comandos, qtd_pipes);
+                }
 
-        liberar_lista_args (lista_args, &qtd_espaco_comandos);
+                liberar_tab_comandos (tab_comandos, &qtd_espaco_comandos);
+            }
+        }
     }
-
 
     return 0;
 }
