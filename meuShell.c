@@ -1,5 +1,5 @@
-// Grupo: Thiago Mendes - 5959 - T1
-//        Gabriel Alves - 5988 - T2
+// Grupo: Thiago Mendes -  5959  -  T1
+//        Gabriel Alves -  5988  -  T2
 
 #include <stdio.h>
 #include <unistd.h>
@@ -24,6 +24,7 @@ void pegar_entrada(p_char entrada) {
             break;
         } else {
             entrada[i] = c;
+
         }
     }
 }
@@ -79,6 +80,7 @@ int escrever_string (p_char** tab_comandos, char* entrada, int inicio, int fim, 
 
 p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos, int* qtd_espaco_args) {
 
+
     //Delimita o inicio e fim de um argumento
     int inicio = 0, fim = 0;
 
@@ -93,11 +95,6 @@ p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos
 
     //Percorre a entrada
     for (int i = 0; i < TAM_ENTRADA; i++) {
-
-        if (i == 0) {
-            inicio = i;
-        }
-
         if (entrada[i] == '\'' || entrada[i] == '\"') {
             if (aspas == false) {
                 aspas = true;
@@ -157,7 +154,7 @@ p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos
     return tab_comandos;
 }
 
-
+  
 
 void funcao_imprimir_lista_args (p_char** lista_args, int qtd_espaco_comandos) {
 
