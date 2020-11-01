@@ -39,6 +39,78 @@ int pegar_entrada(char* entrada) {
     return 0;
 }
 
+// Retira espaços inúteis
+void retirar_espacos (char* entrada) {
+    int j = 0;
+    bool proxEspaco = false;
+    bool entreAspas = false;
+
+    for (int i = 0; i < TAM_ENTRADA; i++) {
+         if (entrada[i] == '\'' || entrada[i] == '\"') {
+            if (entreAspas == false) {
+                entreAspas = true;
+            } else {
+                entreAspas = false;
+            }
+            if (i != j) {
+                entrada[j] = entrada[i];
+            }
+            j++;
+            proxEspaco = true; 
+        } else {
+            if (entreAspas == false) {
+                if (entrada[i] != ' ') {
+                    if (i != j) {
+                        entrada[j] = entrada[i];
+                    }
+                    if (entrada[i] == '\0') {
+                        break;
+                    } 
+                    j++;
+                    proxEspaco = true;
+                } else {
+                    if (proxEspaco && entrada[i] == ' ') {
+                        entrada[j++] = ' ';
+                        proxEspaco = false;
+                    }
+                }
+            } else {
+                if (i != j) {
+                    entrada[j] = entrada[i];
+                }
+                if (entrada[i] == '\0') {
+                    break;
+                } 
+                j++;
+                proxEspaco = true; 
+            }
+        }
+    }
+    if (entrada[j - 1] == ' ') {
+        entrada[j - 1] = '\0';
+    }
+}
+
+p_char** alocar_memoria (int* qtd_espaco_comandos, int* qtd_espaco_args) {
+    //Aloca espaço inicial para "qtd_espaco_comandos" comandos
+    p_char** tab_comandos = (p_char**) calloc (*qtd_espaco_comandos , sizeof(p_char*));
+    if (tab_comandos == NULL) {
+        printf("Erro na alocação\n");
+        exit (EXIT_FAILURE);
+    }
+
+    //Aloca espaço inicial para  "qtd_espaco_args" argumentos
+    for (int i = 0; i < (*qtd_espaco_comandos); i++) {
+        tab_comandos[i] = (p_char*) calloc ((*qtd_espaco_args) , sizeof(p_char));
+        if (tab_comandos[i] == NULL) {
+            printf("Erro na alocação\n");
+            exit (EXIT_FAILURE);
+        }
+    }
+
+    return tab_comandos;
+}
+
 p_char** alocar_memoria (int* qtd_espaco_comandos, int* qtd_espaco_args) {
     //Aloca espaço inicial para "qtd_espaco_comandos" comandos
     p_char** tab_comandos = (p_char**) calloc (*qtd_espaco_comandos , sizeof(p_char*));
@@ -99,7 +171,7 @@ p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos
 
     p_char** tab_comandos = alocar_memoria (qtd_espaco_comandos, qtd_espaco_args);
 
-    // retirar_espacos (entrada);
+    retirar_espacos (entrada);
 
     //Percorre a entrada
     for (int i = 0; i < TAM_ENTRADA; i++) {
