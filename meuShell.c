@@ -38,6 +38,20 @@ int pegar_entrada(char* entrada) {
     }
     return 0;
 }
+// Retorna 1 se a entrada conter um caractere válido ou 0 se a entrada for vazia ou conter somente espaços
+int verificar_entrada (char* entrada) {
+
+    for (int i = 0; i < TAM_ENTRADA; i++) {
+        if (entrada[i] == '\0') {
+            break;
+        } else {
+            if (entrada[i] != ' ') {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
 
 // Retira espaços inúteis
 void retirar_espacos (char* entrada) {
