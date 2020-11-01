@@ -54,7 +54,37 @@ int verificar_entrada (char* entrada) {
     return 0;
 }
 
-// Retira espaços inúteis
+
+// Verifica se a entrada contém o comando 'quit', caso verdadeiro o retorno é 1, caso contrário o retorno é 0
+// Qualquer entrada que contenha a string 'quit' é uma forma válida de encerra o shell 
+int verificar_comando_saida (p_char** tab_comandos, int qtd_comandos) {
+    for (int i = 0; i < qtd_comandos; i++) {
+        if (strcmp (tab_comandos[i][0], "quit") == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// Libera a entrutura tab_comandos, a qual foi criada dinâmicamente para armazenar os comandos e seus respectivos argumentos
+void liberar_tab_comandos (p_char** tab_comandos, int* qtd_espaco_comandos) {
+
+    int i = 0;
+
+    while (i < (*qtd_espaco_comandos)) {
+        int j = 0;
+        while (tab_comandos[i][j] != NULL) {
+            free (tab_comandos[i][j]);
+            j++;
+        }
+        free (tab_comandos[i]);
+        i++;
+    }
+    free (tab_comandos);
+}
+
+// Retira espaços inúteis que podem eventualmente existir na entrada
+// Necessário pois a lógica da função split_entrada ficaria mais complexa
 void retirar_espacos (char* entrada) {
     int j = 0;
     bool proxEspaco = false;
@@ -154,7 +184,8 @@ int escrever_string (p_char** tab_comandos, char* entrada, int inicio, int fim, 
     return qual_argumento;
 }
 
-p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos, int* qtd_espaco_args) {
+
+p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos, int* qtd_espaco_args, int* qtd_comandos) {
 
 
     //Delimita o inicio e fim de um argumento
@@ -188,27 +219,34 @@ p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos
                             fim = i;
                         }
                         qual_argumento = escrever_string (tab_comandos, entrada, inicio, fim, qual_comando, qual_argumento, qtd_espaco_args);
+                        
                         inicio = i + 1;
                     }
                 } else {
                     if (entrada[i] == PIPE) {
                         (*qtd_pipes)++;
-                        qual_comando++;
-                        qual_argumento = 0;
                         inicio = i + 2;
-                        if (qual_comando == *qtd_espaco_comandos) {
-                            tab_comandos = realloc (tab_comandos, sizeof(p_char*) * (*qtd_espaco_comandos << 1));
-                            if (tab_comandos == NULL) {
-                                printf("Erro na realocação\n");
-                                exit (EXIT_FAILURE);
-                            }
-                            *qtd_espaco_comandos <<= 1;
-                            //Aloca espaço para os novos espaços criados
-                            for (int j = qual_comando; j < (*qtd_espaco_comandos); j++) {
-                                tab_comandos[j] = (p_char*) calloc ((*qtd_espaco_args) , sizeof(p_char));
-                                if (tab_comandos[j] == NULL) {
-                                    printf("Erro na alocação\n");
+
+                        // Vai verificar se tab_comandos[qual_comando][0] possui um comando válido antes de incrementar a variável qual_comando
+                        // Necessário para verificar se o comando antes do PIPE é um comando válido, pois pode acontecer da entrada começar com PIPE
+                        if (tab_comandos[qual_comando][0] != NULL) {
+                            qual_comando++;
+                            (*qtd_comandos)++;
+                            qual_argumento = 0;
+                            if (qual_comando == *qtd_espaco_comandos) {
+                                tab_comandos = realloc (tab_comandos, sizeof(p_char*) * (*qtd_espaco_comandos << 1));
+                                if (tab_comandos == NULL) {
+                                    printf("Erro na realocação\n");
                                     exit (EXIT_FAILURE);
+                                }
+                                *qtd_espaco_comandos <<= 1;
+                                //Aloca espaço para os novos espaços criados
+                                for (int j = qual_comando; j < (*qtd_espaco_comandos); j++) {
+                                    tab_comandos[j] = (p_char*) calloc ((*qtd_espaco_args) , sizeof(p_char));
+                                    if (tab_comandos[j] == NULL) {
+                                        printf("Erro na alocação\n");
+                                        exit (EXIT_FAILURE);
+                                    }
                                 }
                             }
                         }
@@ -223,7 +261,16 @@ p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos
                     fim = i;
                 }
                 qual_argumento = escrever_string (tab_comandos, entrada, inicio, fim, qual_comando, qual_argumento, qtd_espaco_args);
-                break;
+                (*qtd_comandos)++;
+                printf("%d\n", *qtd_comandos);
+                printf("%d\n", *qtd_pipes);
+                // Verifica se a quantidade de pipes faz sentido, pois o usuário pode entrar com uma entrada inválida com vários pipes
+                if ((*qtd_pipes + 1) == *qtd_comandos) {
+                    break;
+                } else {
+                    liberar_tab_comandos (tab_comandos, qtd_espaco_comandos);
+                    return NULL;
+                }
             }
         }
     }
@@ -348,37 +395,23 @@ void imprimir_tab_comandos (p_char** tab_comandos, int qtd_espaco_comandos) {
     //Percorre os comandos
     while (i < qtd_espaco_comandos) {
         int j = 0;
-        printf("%dº comando: ", i + 1);
+        printf("tab_comando[%d]: ", i);
         //Percorre os argumentos
         while (tab_comandos[i][j] != NULL) {
             int l = 0;
+            printf("tab_comando[%d][%d]: ", i, j);
+            
             //Percorre os caracteres
             while (tab_comandos[i][j][l] != '\0') {
                 printf("%c", tab_comandos[i][j][l]);
                 l++;
             }
-            printf(" ");
+            printf("      ");
             j++;
         }
         printf("\n");
         i++;
     }
-}
-
-void liberar_tab_comandos (p_char** tab_comandos, int* qtd_espaco_comandos) {
-
-    int i = 0;
-
-    while (i < (*qtd_espaco_comandos)) {
-        int j = 0;
-        while (tab_comandos[i][j] != NULL) {
-            free (tab_comandos[i][j]);
-            j++;
-        }
-        free (tab_comandos[i]);
-        i++;
-    }
-    free (tab_comandos);
 }
 
 
@@ -397,6 +430,7 @@ int main() {
 
     while (1) {
         int qtd_pipes = 0;
+        int qtd_comandos = 0;
         int qtd_espaco_comandos = 4;
         int qtd_espaco_args = 4;
 
@@ -406,17 +440,19 @@ int main() {
 
         if (pegar_entrada(entrada)) {
             if (verificar_entrada(entrada)) {
-                tab_comandos = split_entrada(entrada, &qtd_pipes, &qtd_espaco_comandos, &qtd_espaco_args);
-                imprimir_tab_comandos(tab_comandos, qtd_espaco_comandos);
-
-                if (strcmp(tab_comandos[0][0], "quit") == 0) {
-                    liberar_tab_comandos (tab_comandos, &qtd_espaco_comandos);
-                    break;
+                tab_comandos = split_entrada(entrada, &qtd_pipes, &qtd_espaco_comandos, &qtd_espaco_args, &qtd_comandos);
+                //imprimir_tab_comandos(tab_comandos, qtd_espaco_comandos);
+                if (tab_comandos == NULL) {
+                    printf("meuShell: erro de sintaxe próximo ao token %c\n", PIPE);
                 } else {
-                    executar_comando (tab_comandos, qtd_pipes);
+                    if (verificar_comando_saida(tab_comandos, qtd_comandos)) {
+                        liberar_tab_comandos (tab_comandos, &qtd_espaco_comandos);
+                        break;
+                    } else {
+                        executar_comando (tab_comandos, qtd_pipes);
+                    }
+                    liberar_tab_comandos (tab_comandos, &qtd_espaco_comandos);
                 }
-
-                liberar_tab_comandos (tab_comandos, &qtd_espaco_comandos);
             }
         }
     }
