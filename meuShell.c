@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <string.h>
+#include <stdio_ext.h>
 
 #define TAM_ENTRADA 512
 #define PIPE ','
@@ -105,25 +106,6 @@ void retirar_espacos (char* entrada) {
     }
 }
 
-p_char** alocar_memoria (int* qtd_espaco_comandos, int* qtd_espaco_args) {
-    //Aloca espaço inicial para "qtd_espaco_comandos" comandos
-    p_char** tab_comandos = (p_char**) calloc (*qtd_espaco_comandos , sizeof(p_char*));
-    if (tab_comandos == NULL) {
-        printf("Erro na alocação\n");
-        exit (EXIT_FAILURE);
-    }
-
-    //Aloca espaço inicial para  "qtd_espaco_args" argumentos
-    for (int i = 0; i < (*qtd_espaco_comandos); i++) {
-        tab_comandos[i] = (p_char*) calloc ((*qtd_espaco_args) , sizeof(p_char));
-        if (tab_comandos[i] == NULL) {
-            printf("Erro na alocação\n");
-            exit (EXIT_FAILURE);
-        }
-    }
-
-    return tab_comandos;
-}
 
 p_char** alocar_memoria (int* qtd_espaco_comandos, int* qtd_espaco_args) {
     //Aloca espaço inicial para "qtd_espaco_comandos" comandos
@@ -277,11 +259,74 @@ void executar_comando (p_char** tab_comandos, int qtd_pipes) {
             // Pai entra aqui e espera pelo filho
             waitpid(-1, NULL, 0);
         }
+    } else if (qtd_comandos == 2) {
+        pid_t pid;
+        int fd[2];
 
-    } 
+        if (pipe(fd) < 0) {
+            perror("Erro pipe") ;
+            return;
+        }
+
+        pid = fork();
+
+        // Fork retorna 0 p/ o filho
+        if (pid == 0) {
+
+            dup2(fd[1], STDOUT_FILENO);
+
+            close(fd[0]);
+            close(fd[1]);
+
+            
+            if (execvp(tab_comandos[0][0], tab_comandos[0]) == -1) {
+                // perror("Erro execvp");
+
+                // perror mostra uma mensagem de erro referente a última chamada de sistema (nesse caso execvp)
+                // de acordo com o valor da variável errno
+                perror(tab_comandos[0][0]);
+            }
+            exit(EXIT_FAILURE);
+
+        } else if (pid < 0) {
+            // Fork retorna -1 em caso de erro
+            perror("Erro fork");
+        }
+
+         pid = fork();
+
+        // Fork retorna 0 p/ o filho
+        if (pid == 0) {
+
+            dup2(fd[0], STDIN_FILENO);
+
+            close(fd[1]);
+            close(fd[0]);
+            
+
+            if (execvp(tab_comandos[1][0], tab_comandos[1]) == -1) {
+                // perror("Erro execvp");
+
+                // perror mostra uma mensagem de erro referente a última chamada de sistema (nesse caso execvp)
+                // de acordo com o valor da variável errno
+                perror(tab_comandos[0][0]);
+            }
+            exit(EXIT_FAILURE);
+
+        } else if (pid < 0) {
+            // Fork retorna -1 em caso de erro
+            perror("Erro fork");
+        } 
+
+         waitpid (-1, NULL, 0);
+        
+
+        close(fd[0]); 
+        close(fd[1]);
+    }
 }
 
-void funcao_imprimir_tab_comandos (p_char** tab_comandos, int qtd_espaco_comandos) {
+void imprimir_tab_comandos (p_char** tab_comandos, int qtd_espaco_comandos) {
 
     int i = 0;
     //Percorre os comandos
@@ -346,7 +391,7 @@ int main() {
         if (pegar_entrada(entrada)) {
             if (verificar_entrada(entrada)) {
                 tab_comandos = split_entrada(entrada, &qtd_pipes, &qtd_espaco_comandos, &qtd_espaco_args);
-                //imprimir_tab_comandos(tab_comandos, qtd_espaco_comandos);
+                imprimir_tab_comandos(tab_comandos, qtd_espaco_comandos);
 
                 if (strcmp(tab_comandos[0][0], "quit") == 0) {
                     liberar_tab_comandos (tab_comandos, &qtd_espaco_comandos);
