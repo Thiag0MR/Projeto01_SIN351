@@ -12,21 +12,31 @@
 #define PIPE ','
 #define p_char char*
 
-void pegar_entrada(p_char entrada) {
+int pegar_entrada(char* entrada) {
 
+    // Para imprimir colocorido
+    printf("\033[1;32m");
     printf("meuShell@meuShell-pc:$ > ");
+    // Volta a cor default
+    printf("\033[0m");
 
     char c;
-    for (int i = 0; i < TAM_ENTRADA; i++) {
-        scanf("%c", &c);
-        if (c == '\n') {
-            entrada[i] = '\0';
-            break;
+    for (int i = 0; i < 1024; i++) {
+        if (i < 512) {
+            scanf("%c", &c);
+            if (c == '\n') {
+                entrada[i] = '\0';
+                return 1;
+            } else {
+                entrada[i] = c;
+            }
         } else {
-            entrada[i] = c;
-
+            printf("Erro: Entrada com mais de 512 caracteres\n");
+            __fpurge(stdin);
+            break;
         }
     }
+    return 0;
 }
 
 p_char** alocar_memoria (int* qtd_espaco_comandos, int* qtd_espaco_args) {
