@@ -4,71 +4,177 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <sys/wait.h>
+#include <string.h>
 
-void pegar_entrada(char* linha) {
+#define TAM_ENTRADA 512
+#define PIPE ','
+#define p_char char*
+
+void pegar_entrada(p_char entrada) {
+
+    printf("meuShell@meuShell-pc:$ > ");
+
     char c;
-    int i =0;
-    for ( i ; i < 512; i++) {
+    for (int i = 0; i < TAM_ENTRADA; i++) {
         scanf("%c", &c);
         if (c == '\n') {
-            linha[i] = '\0';
+            entrada[i] = '\0';
             break;
         } else {
-            linha[i] = c;
+            entrada[i] = c;
         }
     }
 }
 
 
-void split_entrada (char* linha, char comandos[][512]) {
-    int l = 0, inicio = 0, fim = 0;
-    bool espaco = false;
 
-<<<<<<< HEAD
-    for (int i = 0; i < 512; i++) {
+p_char** alocar_memoria (int* qtd_espaco_comandos, int* qtd_espaco_args) {
+    //Aloca espaço inicial para "qtd_espaco_comandos" comandos
+    p_char** tab_comandos = (p_char**) calloc (*qtd_espaco_comandos , sizeof(p_char*));
+    if (tab_comandos == NULL) {
+        printf("Erro na alocação\n");
+        exit (EXIT_FAILURE);
+    }
+
+    //Aloca espaço inicial para  "qtd_espaco_args" argumentos
+    for (int i = 0; i < (*qtd_espaco_comandos); i++) {
+        tab_comandos[i] = (p_char*) calloc ((*qtd_espaco_args) , sizeof(p_char));
+        if (tab_comandos[i] == NULL) {
+            printf("Erro na alocação\n");
+            exit (EXIT_FAILURE);
+        }
+    }
+
+    return tab_comandos;
+}
+
+// Escreve a string delimitada pelas variáveis inicio e fim
+int escrever_string (p_char** tab_comandos, char* entrada, int inicio, int fim, int qual_comando, int qual_argumento, int* qtd_espaco_args) {
+
+    tab_comandos[qual_comando][qual_argumento] = (char*) malloc (sizeof(char) * ((fim - inicio) + 1));
+    if (tab_comandos[qual_comando][qual_argumento] == NULL) {
+        printf("Erro na alocação\n");
+        exit (EXIT_FAILURE);
+    }
+    int contador = 0;
+    for (int j = inicio; j < fim; j++) {
+        tab_comandos[qual_comando][qual_argumento][contador++] = entrada[j];
+    }
+    tab_comandos[qual_comando][qual_argumento++][contador] = '\0';
+
+    if (qual_argumento == *qtd_espaco_args) {
+        tab_comandos[qual_comando] = realloc (tab_comandos[qual_comando], sizeof(p_char) * (*qtd_espaco_args << 1));
+        if (tab_comandos[qual_comando] == NULL) {
+            printf("Erro na realocação\n");
+            exit (EXIT_FAILURE);
+        }
+        *qtd_espaco_args <<= 1;
+    }
+    tab_comandos[qual_comando][qual_argumento] = NULL;
+
+    return qual_argumento;
+}
+
+p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos, int* qtd_espaco_args) {
+
+    //Delimita o inicio e fim de um argumento
+    int inicio = 0, fim = 0;
+
+    bool aspas = false;
+
+    int qual_comando = 0;
+    int qual_argumento = 0;
+
+    p_char** tab_comandos = alocar_memoria (qtd_espaco_comandos, qtd_espaco_args);
+
+    // retirar_espacos (entrada);
+
+    //Percorre a entrada
+    for (int i = 0; i < TAM_ENTRADA; i++) {
+
         if (i == 0) {
             inicio = i;
         }
 
-        if (linha[i] == ' ' && espaco == false) {
-            fim = i;
-            espaco = true;
-            int contador = 0;
-            for (int j = inicio; j < fim; j++) {
-                comandos[l][contador] = linha[j];
-                contador++;
+        if (entrada[i] == '\'' || entrada[i] == '\"') {
+            if (aspas == false) {
+                aspas = true;
+                inicio = i + 1;
+            } else {
+                aspas = false;
             }
-            comandos[l][fim] ='\0';
-            comandos[l+1][0] ='\0';
-            l++;
         } else {
-            if (espaco) {
-                inicio = i;
+            if (aspas == false) {
+                if (entrada[i] == ' ') {
+                    if (entrada[i - 1] != PIPE) {
+                        if (entrada[i - 1] == '\'' || entrada[i - 1] == '\"') {
+                            fim = i - 1;
+                        } else {
+                            fim = i;
+                        }
+                        qual_argumento = escrever_string (tab_comandos, entrada, inicio, fim, qual_comando, qual_argumento, qtd_espaco_args);
+                        inicio = i + 1;
+                    }
+                } else {
+                    if (entrada[i] == PIPE) {
+                        (*qtd_pipes)++;
+                        qual_comando++;
+                        qual_argumento = 0;
+                        inicio = i + 2;
+                        if (qual_comando == *qtd_espaco_comandos) {
+                            tab_comandos = realloc (tab_comandos, sizeof(p_char*) * (*qtd_espaco_comandos << 1));
+                            if (tab_comandos == NULL) {
+                                printf("Erro na realocação\n");
+                                exit (EXIT_FAILURE);
+                            }
+                            *qtd_espaco_comandos <<= 1;
+                            //Aloca espaço para os novos espaços criados
+                            for (int j = qual_comando; j < (*qtd_espaco_comandos); j++) {
+                                tab_comandos[j] = (p_char*) calloc ((*qtd_espaco_args) , sizeof(p_char));
+                                if (tab_comandos[j] == NULL) {
+                                    printf("Erro na alocação\n");
+                                    exit (EXIT_FAILURE);
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            espaco = false;
-        }
 
-        if (linha[i] == '\0') {
-            int contador = 0;
-            fim = i;
-            for (int j = inicio; j < fim; j++) {
-                comandos[l][contador] = linha[j];
-                contador++;
+            if (entrada[i] == '\0') {
+                if (entrada[i - 1] == '\'' || entrada[i - 1] == '\"') {
+                    fim = i - 1;
+                } else {
+                    fim = i;
+                }
+                qual_argumento = escrever_string (tab_comandos, entrada, inicio, fim, qual_comando, qual_argumento, qtd_espaco_args);
+                break;
             }
-            comandos[l][fim] ='\0';
-            comandos[l+1][0] ='\0';
-            break;
         }
     }
+    return tab_comandos;
 }
 
-void funcao_imprimir_comandos (char comandos[][512]) {
+
+
+void funcao_imprimir_lista_args (p_char** lista_args, int qtd_espaco_comandos) {
 
     int i = 0;
-    while (comandos[i][0] != '\0') {
+    //Percorre os comandos
+    while (i < qtd_espaco_comandos) {
         int j = 0;
-        while (comandos[i][j] != '\0') {
-            printf("%c", comandos[i][j]);
+        printf("%dº comando: ", i + 1);
+        //Percorre os argumentos
+        while (lista_args[i][j] != NULL) {
+            int l = 0;
+            //Percorre os caracteres
+            while (lista_args[i][j][l] != '\0') {
+                printf("%c", lista_args[i][j][l]);
+                l++;
+            }
+            printf(" ");
             j++;
         }
         printf("\n");
@@ -76,65 +182,44 @@ void funcao_imprimir_comandos (char comandos[][512]) {
     }
 }
 
+void liberar_lista_args (p_char** lista_args, int* qtd_espaco_comandos) {
 
-=======
+    int i = 0;
+
+    while (i < (*qtd_espaco_comandos)) {
+        int j = 0;
+        while (lista_args[i][j] != NULL) {
+            free (lista_args[i][j]);
+            j++;
+        }
+        free (lista_args[i]);
+        i++;
+    }
+    free (lista_args);
 }
 
-void analisa_entrada (char* linha, char comandos[512][512]) {
 
-	int i = 1;
-    int k = 0;
-    int final = 0;
-    int comeco = 0;
-	int col = 0;
-    int lin = 0;
-    char c = 0;
-    int espaco = 0;
-    
-    for ( i ; i < 512; i++) {
-        c = linha[i-1];
-		final = i;
-        if (c == ' ') {
-        	espaco++;
-            if (linha[i] != ' ') {
-            	espaco ++;
-            	final -= (espaco + 1);
-            	
-            	
-            	for(col ; col < 10;){
-            		for(lin ; lin < final; lin++){
-            			comandos[col][lin]= linha[comeco];
-            			comeco++;
-					}
-				}
-				col++;
-				comeco += (final + (espaco + 1));
-				
-                
-            }else if (linha[i] == '\0'){
-            	break;
-			}
-    	} 
-	}
+int main() {
 
->>>>>>> e3542260702a5188ddd740e0e7fdeace9474c3a4
+    char entrada[TAM_ENTRADA];
+    p_char** lista_args;
+    int qtd_espaco_comandos = 1;
+    int qtd_espaco_args = 1;
+    pid_t pid;
 
-int main(int argc, char const *argv[]) {
-
-    char linha[512];
-    char comandos[512][512];
 
     while (1) {
-        printf("meuShell@meuShell-pc:$ > ");
-        pegar_entrada(linha);
+        int qtd_pipes = 0;
 
-        split_entrada(linha, comandos);
+        pegar_entrada(entrada);
 
-        funcao_imprimir_comandos(comandos);
+        lista_args = split_entrada(entrada, &qtd_pipes, &qtd_espaco_comandos, &qtd_espaco_args);
+        funcao_imprimir_lista_args(lista_args, qtd_espaco_comandos);
 
 
-        break;
+        liberar_lista_args (lista_args, &qtd_espaco_comandos);
     }
+
 
     return 0;
 }
