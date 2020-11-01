@@ -248,6 +248,38 @@ p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos
     return tab_comandos;
 }
 
+void executar_comando (p_char** tab_comandos, int qtd_pipes) {
+    int qtd_comandos = qtd_pipes + 1;
+
+    if (qtd_comandos == 1) {
+
+        pid_t pid;
+
+        pid = fork();
+
+        // Fork retorna 0 p/ o filho
+        if (pid == 0) {
+
+            if (execvp(tab_comandos[0][0], tab_comandos[0]) == -1) {
+                // perror("Erro execvp");
+
+                // perror mostra uma mensagem de erro referente a última chamada de sistema (nesse caso execvp)
+                // de acordo com o valor da variável errno
+                perror(tab_comandos[0][0]);
+            }
+            exit(EXIT_FAILURE);
+
+        } else if (pid < 0) {
+            // Fork retorna -1 em caso de erro
+            perror("Erro fork");
+        } else {
+            // Fork retorna o id do processo filho no processo pai em caso de sucesso
+            // Pai entra aqui e espera pelo filho
+            waitpid(-1, NULL, 0);
+        }
+
+    } 
+}
 
 void funcao_imprimir_tab_comandos (p_char** tab_comandos, int qtd_espaco_comandos) {
 
