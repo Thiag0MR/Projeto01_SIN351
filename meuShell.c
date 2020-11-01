@@ -259,70 +259,86 @@ void executar_comando (p_char** tab_comandos, int qtd_pipes) {
             // Pai entra aqui e espera pelo filho
             waitpid(-1, NULL, 0);
         }
-    } else if (qtd_comandos == 2) {
+    } else if (qtd_comandos >= 2) {
+
+        int** fd;
         pid_t pid;
-        int fd[2];
 
-        if (pipe(fd) < 0) {
-            perror("Erro pipe") ;
-            return;
+        // Cria uma matriz de inteiros com "qtd_pipes" linhas e 2 colunas
+        // C/ linha representa a leitura fd[linha][0] e escrita fd[linha][1] de um pipe
+        fd = (int**) malloc (sizeof(int*) * qtd_pipes);
+        if (fd == NULL) {
+            printf("Erro na alocação\n");
+            exit (EXIT_FAILURE);
+        }
+        for (int i = 0; i < qtd_pipes; i++) {
+            fd[i] = (int*) malloc(sizeof(int) * 2);
+            if (fd[i] == NULL) {
+                printf("Erro na alocação\n");
+                exit (EXIT_FAILURE);
+            }
         }
 
-        pid = fork();
-
-        // Fork retorna 0 p/ o filho
-        if (pid == 0) {
-
-            dup2(fd[1], STDOUT_FILENO);
-
-            close(fd[0]);
-            close(fd[1]);
-
-            
-            if (execvp(tab_comandos[0][0], tab_comandos[0]) == -1) {
-                // perror("Erro execvp");
-
-                // perror mostra uma mensagem de erro referente a última chamada de sistema (nesse caso execvp)
-                // de acordo com o valor da variável errno
-                perror(tab_comandos[0][0]);
+        // Cria efetivamente o pipe
+        for (int i = 0; i < qtd_pipes; i++) {
+            if( pipe(fd[i]) < 0) {
+                perror("Erro pipe") ;
+                return;
             }
-            exit(EXIT_FAILURE);
-
-        } else if (pid < 0) {
-            // Fork retorna -1 em caso de erro
-            perror("Erro fork");
         }
 
-         pid = fork();
+        // Cria um processo filho para c/ comando
+        for (int i = 0; i < qtd_comandos; i++) {
+            pid = fork();
 
-        // Fork retorna 0 p/ o filho
-        if (pid == 0) {
+            if (pid == 0) {
+                if (i == 0) {
+                    // Se for o  primeiro filho
+                    dup2(fd[i][1], STDOUT_FILENO);
+                } else if (i != 0 && i != (qtd_comandos - 1)) {
+                    // Entre o 1º e o último
+                    dup2(fd[i - 1][0], STDIN_FILENO);
+                    dup2(fd[i][1], STDOUT_FILENO);
+                } else {
+                    // Se for o último filho
+                    dup2(fd[i - 1][0], STDIN_FILENO);
+                }
 
-            dup2(fd[0], STDIN_FILENO);
+                //Fecha todos os descritores
+                for (int i = 0; i < qtd_pipes; i++) {
+                    for (int j = 0; j < 2; j++) {
+                        close(fd[i][j]);
+                    }
+                }
 
-            close(fd[1]);
-            close(fd[0]);
-            
-
-            if (execvp(tab_comandos[1][0], tab_comandos[1]) == -1) {
-                // perror("Erro execvp");
-
-                // perror mostra uma mensagem de erro referente a última chamada de sistema (nesse caso execvp)
-                // de acordo com o valor da variável errno
-                perror(tab_comandos[0][0]);
+                // Carrega o executável na memória do processo filho
+                if (execvp(tab_comandos[i][0], tab_comandos[i]) == -1) {
+                    // perror("Erro execvp");
+                    perror(tab_comandos[i][0]);
+                }
+                exit(EXIT_FAILURE);
+            } else if (pid < 0) {
+                perror("Erro fork");
             }
-            exit(EXIT_FAILURE);
+        }
 
-        } else if (pid < 0) {
-            // Fork retorna -1 em caso de erro
-            perror("Erro fork");
-        } 
+        // O pai fecha todos os descritores, pois só assim o filho vai saber quando parar de ler
+        for (int i = 0; i < qtd_pipes; i++) {
+            for (int j = 0; j < 2; j++) {
+                close(fd[i][j]);
+            }
+        }
 
-         waitpid (-1, NULL, 0);
-        
+        // O pai espera por todos os filhos terminarem
+        for (int i = 0; i < qtd_comandos; i++) {
+            waitpid(-1, NULL, 0);
+        }
 
-        close(fd[0]); 
-        close(fd[1]);
+        // Desaloca a memória alocada para os descritores
+        for (int i = 0; i < qtd_pipes; i++) {
+            free(fd[i]);
+        }
+        free(fd);
     }
 }
 
