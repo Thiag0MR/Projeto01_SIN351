@@ -139,7 +139,7 @@ void retirar_espacos (char* entrada) {
 
 p_char** alocar_memoria (int* qtd_espaco_comandos, int* qtd_espaco_args) {
     //Aloca espaço inicial para "qtd_espaco_comandos" comandos
-    p_char** tab_comandos = (p_char**) calloc (*qtd_espaco_comandos , sizeof(p_char*));
+    p_char** tab_comandos = (p_char**) calloc ((*qtd_espaco_comandos) , sizeof(p_char*));
     if (tab_comandos == NULL) {
         printf("Erro na alocação\n");
         exit (EXIT_FAILURE);
@@ -172,7 +172,7 @@ int escrever_string (p_char** tab_comandos, char* entrada, int inicio, int fim, 
     tab_comandos[qual_comando][qual_argumento++][contador] = '\0';
 
     if (qual_argumento == *qtd_espaco_args) {
-        tab_comandos[qual_comando] = realloc (tab_comandos[qual_comando], sizeof(p_char) * (*qtd_espaco_args << 1));
+        tab_comandos[qual_comando] = (p_char*) realloc (tab_comandos[qual_comando], sizeof(p_char) * (*qtd_espaco_args << 1));
         if (tab_comandos[qual_comando] == NULL) {
             printf("Erro na realocação\n");
             exit (EXIT_FAILURE);
@@ -195,6 +195,9 @@ p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos
 
     int qual_comando = 0;
     int qual_argumento = 0;
+    // Quando o bloco de memoria é realocado para um respectivo comando, a variável qtd_espaco_args é incrementada para a nova qtd de espaços vazios, logo é preciso 
+    // armazenar a qtd de blocos vazios que foi inicialmente alocada para os outros comandos para que a variável qtd_espaco_args corresponda a qtd correta de espaço vazios 
+    int qtd_espaco_args_inicial = *qtd_espaco_args;
 
     p_char** tab_comandos = alocar_memoria (qtd_espaco_comandos, qtd_espaco_args);
 
@@ -233,6 +236,7 @@ p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos
                             qual_comando++;
                             (*qtd_comandos)++;
                             qual_argumento = 0;
+                            *qtd_espaco_args = qtd_espaco_args_inicial;
                             if (qual_comando == *qtd_espaco_comandos) {
                                 tab_comandos = realloc (tab_comandos, sizeof(p_char*) * (*qtd_espaco_comandos << 1));
                                 if (tab_comandos == NULL) {
@@ -260,10 +264,10 @@ p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos
                 } else {
                     fim = i;
                 }
-                qual_argumento = escrever_string (tab_comandos, entrada, inicio, fim, qual_comando, qual_argumento, qtd_espaco_args);
-                (*qtd_comandos)++;
-                printf("%d\n", *qtd_comandos);
-                printf("%d\n", *qtd_pipes);
+                if (fim > inicio) {
+                    qual_argumento = escrever_string (tab_comandos, entrada, inicio, fim, qual_comando, qual_argumento, qtd_espaco_args);
+                    (*qtd_comandos)++;
+                }
                 // Verifica se a quantidade de pipes faz sentido, pois o usuário pode entrar com uma entrada inválida com vários pipes
                 if ((*qtd_pipes + 1) == *qtd_comandos) {
                     break;
@@ -421,7 +425,7 @@ void imprimir_tab_comandos (p_char** tab_comandos, int qtd_espaco_comandos) {
 // Interpreta argumentos entre aspas como um único argumento
 // Não faz distinção entre aspas duplas ou simples 
 // Se existir somente uma aspas, ele exerga tudo da 1ª até o final como algo único
-// Para sair digitar 'quit'
+// Para sair digitar o comando 'quit' ou uma entrada que contenha o comando 'quit' (Ex: 'echo 111111 , quit')
 
 
 int main() {
@@ -441,7 +445,11 @@ int main() {
         if (pegar_entrada(entrada)) {
             if (verificar_entrada(entrada)) {
                 tab_comandos = split_entrada(entrada, &qtd_pipes, &qtd_espaco_comandos, &qtd_espaco_args, &qtd_comandos);
-                //imprimir_tab_comandos(tab_comandos, qtd_espaco_comandos);
+
+                // if (tab_comandos != NULL) {
+                //     imprimir_tab_comandos(tab_comandos, qtd_espaco_comandos);
+                // }
+                
                 if (tab_comandos == NULL) {
                     printf("meuShell: erro de sintaxe próximo ao token %c\n", PIPE);
                 } else {
