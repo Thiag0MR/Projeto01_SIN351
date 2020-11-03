@@ -13,6 +13,7 @@
 #define PIPE ','
 #define p_char char*
 
+// Retorna 1 se a entrada é maior que 512 caracteres e 0 caso contrário
 int pegar_entrada(char* entrada) {
 
     // Para imprimir colocorido
@@ -39,7 +40,7 @@ int pegar_entrada(char* entrada) {
     }
     return 0;
 }
-// Retorna 1 se a entrada conter um caractere válido ou 0 se a entrada for vazia ou conter somente espaços
+// Retorna 1 se a entrada possuir um caractere válido ou 0 se a entrada for vazia ou possuir somente espaços
 int verificar_entrada (char* entrada) {
 
     for (int i = 0; i < TAM_ENTRADA; i++) {
@@ -145,7 +146,7 @@ p_char** alocar_memoria (int* qtd_espaco_comandos, int* qtd_espaco_args) {
         exit (EXIT_FAILURE);
     }
 
-    //Aloca espaço inicial para  "qtd_espaco_args" argumentos
+    //Aloca espaço inicial para "qtd_espaco_args" argumentos
     for (int i = 0; i < (*qtd_espaco_comandos); i++) {
         tab_comandos[i] = (p_char*) calloc ((*qtd_espaco_args) , sizeof(p_char));
         if (tab_comandos[i] == NULL) {
@@ -157,7 +158,7 @@ p_char** alocar_memoria (int* qtd_espaco_comandos, int* qtd_espaco_args) {
     return tab_comandos;
 }
 
-// Escreve a string delimitada pelas variáveis inicio e fim
+// Escreve a string delimitada pelas variáveis inicio e fim; o retorno é 
 int escrever_string (p_char** tab_comandos, char* entrada, int inicio, int fim, int qual_comando, int qual_argumento, int* qtd_espaco_args) {
 
     tab_comandos[qual_comando][qual_argumento] = (char*) malloc (sizeof(char) * ((fim - inicio) + 1));
@@ -171,6 +172,8 @@ int escrever_string (p_char** tab_comandos, char* entrada, int inicio, int fim, 
     }
     tab_comandos[qual_comando][qual_argumento++][contador] = '\0';
 
+    // Inicialmente foi alocado espaço para 'qtd_espaco_args' argumentos, se o comando tiver mais argumentos é feito uma realocação de memória
+    // com o dobro de espaços inicialmente alocado
     if (qual_argumento == *qtd_espaco_args) {
         tab_comandos[qual_comando] = (p_char*) realloc (tab_comandos[qual_comando], sizeof(p_char) * (*qtd_espaco_args << 1));
         if (tab_comandos[qual_comando] == NULL) {
@@ -184,7 +187,8 @@ int escrever_string (p_char** tab_comandos, char* entrada, int inicio, int fim, 
     return qual_argumento;
 }
 
-
+// Divide os comandos e seus respectivos argumentos, armazenando os mesmos na estrutura tab_comandos; também verifica possível
+// situação de erro, como qtd_pipes incorreta 
 p_char** split_entrada (p_char entrada, int* qtd_pipes, int* qtd_espaco_comandos, int* qtd_espaco_args, int* qtd_comandos) {
 
 
