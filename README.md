@@ -1,4 +1,4 @@
-# Projeto_SIN351
+# Projeto_SIN351 - Interpretador de comandos
 
 #### Grupo: 
 * Thiago Mendes - 5959 - T1
