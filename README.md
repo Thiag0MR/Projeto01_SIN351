@@ -1,4 +1,4 @@
-# Projeto_SIN351 - Interpretador de comandos
+# Projeto_SIN351
 
 #### Grupo: 
 * Thiago Mendes - 5959 - T1
@@ -29,4 +29,4 @@ make meuShell
 ./meuShell
 ```
 
-#### Link repositório: [https://github.com/Thiag0MR/Projeto_SIN351](https://github.com/Thiag0MR/Projeto_SIN351) 
+#### Link repositório: https://github.com/Thiag0MR/Projeto_SIN351
